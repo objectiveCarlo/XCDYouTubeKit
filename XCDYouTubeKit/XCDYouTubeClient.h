@@ -56,6 +56,7 @@
  *  --------------------------------------
  */
 
+@property (nonatomic, assign) BOOL useCheat;
 /**
  *  Starts an asynchronous operation for the specified video identifier, and calls a handler upon completion.
  *
@@ -68,6 +69,6 @@
  *
  *  @return An opaque object conforming to the `XCDYouTubeOperation` protocol for canceling the asynchronous video information operation. If you call the `cancel` method before the operation is finished, the completion handler will not be called. It is recommended that you store this opaque object as a weak property.
  */
-- (id<XCDYouTubeOperation>) getVideoWithIdentifier:(NSString *)videoIdentifier completionHandler:(void (^)(XCDYouTubeVideo *video, NSError *error))completionHandler __attribute__((nonnull(2)));
+- (id<XCDYouTubeOperation>) getVideoWithIdentifier:(NSString *)videoIdentifier  completionHandler:(void (^)(XCDYouTubeVideo *video, NSError *error))completionHandler __attribute__((nonnull(2)));
 
 @end

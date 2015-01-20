@@ -8,6 +8,7 @@
 #import "XCDYouTubeError.h"
 #import "XCDYouTubeVideoWebpage.h"
 #import "XCDYouTubePlayerScript.h"
+#import "XCDYouTubeClient.h"
 
 @interface XCDYouTubeVideoOperation () <NSURLConnectionDataDelegate, NSURLConnectionDelegate>
 @property (atomic, copy, readonly) NSString *videoIdentifier;
@@ -182,7 +183,18 @@
 	self.isExecuting = YES;
 	
 	self.eventLabels = [[NSMutableArray alloc] initWithArray:@[ @"embedded", @"detailpage" ]];
-	[self startNextVideoInfoRequest];
+	
+	if ([[XCDYouTubeClient defaultClient] useCheat]) {
+		
+		NSDictionary *query = @{ @"v": self.videoIdentifier, @"hl": self.languageIdentifier, @"has_verified": @YES };
+		NSString *queryString = XCDQueryStringWithDictionary(query, NSUTF8StringEncoding);
+		NSURL *webpageURL = [NSURL URLWithString:[@"https://www.youtube.com/watch?" stringByAppendingString:queryString]];
+		
+		[self startRequestWithURL:webpageURL];
+	} else {
+		
+		[self startNextVideoInfoRequest];
+	}
 }
 
 - (void) cancel

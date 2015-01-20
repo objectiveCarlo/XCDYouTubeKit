@@ -19,9 +19,12 @@ NSString *const XCDMetadataKeyLargeThumbnailURL = @"LargeThumbnailURL";
 NSString *const XCDYouTubeVideoPlayerViewControllerDidReceiveVideoNotification = @"XCDYouTubeVideoPlayerViewControllerDidReceiveVideoNotification";
 NSString *const XCDYouTubeVideoUserInfoKey = @"Video";
 
-@interface XCDYouTubeVideoPlayerViewController ()
+@interface XCDYouTubeVideoPlayerViewController ()<NSURLConnectionDelegate>
 @property (nonatomic, weak) id<XCDYouTubeOperation> videoOperation;
 @property (nonatomic, assign, getter = isEmbedded) BOOL embedded;
+@property (nonatomic, assign) BOOL checkURL;
+@property (nonatomic, strong) NSURLConnection *urlConnection;
+@property (nonatomic, strong) NSURL *currentStreamURL;
 @end
 
 @implementation XCDYouTubeVideoPlayerViewController
@@ -43,6 +46,31 @@ NSString *const XCDYouTubeVideoUserInfoKey = @"Video";
  *        |-- [super init]
  *        `-- [self.moviePlayer setContentURL:contentURL]
  */
+#pragma mark -NSURLConnectionDelegate methods
+- (void)connection:(NSURLConnection*)connection didReceiveResponse:(NSURLResponse *)response
+{
+	NSLog(@"Did Receive Response %@", response);
+	
+	NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) response;
+	if ([httpResponse respondsToSelector:@selector(statusCode)]&&(long)[httpResponse statusCode] < 299) {
+	
+		self.moviePlayer.contentURL = self.currentStreamURL;
+		
+	} else {
+	
+		if (self.checkURL) {
+			
+			[self stopWithError:[NSError errorWithDomain:@"XC" code:[httpResponse statusCode] userInfo:nil]];
+			
+		} else {
+			
+			self.checkURL = YES;
+			[self forceVideoIdentifier];
+		}
+	}
+	
+	[connection cancel];
+}
 
 - (instancetype) init
 {
@@ -68,12 +96,14 @@ NSString *const XCDYouTubeVideoUserInfoKey = @"Video";
 	
 	// See https://github.com/0xced/XCDYouTubeKit/commit/cadec1c3857d6a302f71b9ce7d1ae48e389e6890
 	[[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidEnterBackgroundNotification object:nil];
-	
+	self.checkURL = NO;
 	if (videoIdentifier)
 		self.videoIdentifier = videoIdentifier;
 	
 	return self;
 }
+
+
 #pragma clang diagnostic pop
 
 #pragma mark - Public
@@ -94,32 +124,38 @@ NSString *const XCDYouTubeVideoUserInfoKey = @"Video";
 	_videoIdentifier = [videoIdentifier copy];
 	
 	[self.videoOperation cancel];
-	self.videoOperation = [[XCDYouTubeClient defaultClient] getVideoWithIdentifier:videoIdentifier completionHandler:^(XCDYouTubeVideo *video, NSError *error)
-	{
-		if (video)
-		{
-			NSURL *streamURL = nil;
-			for (NSNumber *videoQuality in self.preferredVideoQualities)
-			{
-				streamURL = video.streamURLs[videoQuality];
-				if (streamURL)
-				{
-					[self startVideo:video streamURL:streamURL];
-					break;
-				}
-			}
-			
-			if (!streamURL)
-			{
-				NSError *noStreamError = [NSError errorWithDomain:XCDYouTubeVideoErrorDomain code:XCDYouTubeErrorNoStreamAvailable userInfo:nil];
-				[self stopWithError:noStreamError];
-			}
-		}
-		else
-		{
-			[self stopWithError:error];
-		}
-	}];
+	[self forceVideoIdentifier];
+}
+
+- (void)forceVideoIdentifier {
+	
+	[[XCDYouTubeClient defaultClient] setUseCheat:self.checkURL];
+	self.videoOperation = [[XCDYouTubeClient defaultClient] getVideoWithIdentifier:self.videoIdentifier completionHandler:^(XCDYouTubeVideo *video, NSError *error)
+						   {
+							   if (video)
+							   {
+								   NSURL *streamURL = nil;
+								   for (NSNumber *videoQuality in self.preferredVideoQualities)
+								   {
+									   streamURL = video.streamURLs[videoQuality];
+									   if (streamURL)
+									   {
+										   [self startVideo:video streamURL:streamURL];
+										   break;
+									   }
+								   }
+								   
+								   if (!streamURL)
+								   {
+									   NSError *noStreamError = [NSError errorWithDomain:XCDYouTubeVideoErrorDomain code:XCDYouTubeErrorNoStreamAvailable userInfo:nil];
+									   [self stopWithError:noStreamError];
+								   }
+							   }
+							   else
+							   {
+								   [self stopWithError:error];
+							   }
+						   }];
 }
 
 - (void) presentInView:(UIView *)view
@@ -155,9 +191,21 @@ NSString *const XCDYouTubeVideoUserInfoKey = @"Video";
 	[[NSNotificationCenter defaultCenter] postNotificationName:XCDYouTubeVideoPlayerViewControllerDidReceiveMetadataNotification object:self userInfo:userInfo];
 #pragma clang diagnostic pop
 	
-	[[NSNotificationCenter defaultCenter] postNotificationName:XCDYouTubeVideoPlayerViewControllerDidReceiveVideoNotification object:self userInfo:@{ XCDYouTubeVideoUserInfoKey: video }];
 	
-	self.moviePlayer.contentURL = streamURL;
+	NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:streamURL
+														  cachePolicy:NSURLRequestReloadIgnoringLocalAndRemoteCacheData
+													  timeoutInterval:10];
+	
+	[request setHTTPMethod: @"GET"];
+	self.currentStreamURL = streamURL;
+	if (streamURL) {
+		self.urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
+
+	} else {
+		
+		[self stopWithError:[NSError errorWithDomain:@"XC" code:401 userInfo:nil]];
+	}
+
 }
 
 - (void) stopWithError:(NSError *)error

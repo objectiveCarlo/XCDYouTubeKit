@@ -6,6 +6,8 @@
 
 #import "XCDYouTubeError.h"
 
+#import "XCDYouTubeClient.h"
+
 #import <objc/runtime.h>
 
 NSString *const XCDYouTubeVideoErrorDomain = @"XCDYouTubeVideoErrorDomain";
@@ -105,8 +107,12 @@ NSString *XCDQueryStringWithDictionary(NSDictionary *dictionary, NSStringEncodin
 			
 			NSString *scrambledSignature = stream[@"s"];
 			NSString *signature = [playerScript unscrambleSignature:scrambledSignature];
-			if (playerScript && !signature)
-				continue;
+			
+			if (![[XCDYouTubeClient defaultClient] useCheat]) {
+				
+				if (playerScript && !signature)
+					continue;
+			}
 			
 			NSString *urlString = stream[@"url"];
 			NSString *itag = stream[@"itag"];
