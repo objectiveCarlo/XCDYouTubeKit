@@ -54,6 +54,8 @@ MP_EXTERN NSString *const XCDYouTubeVideoUserInfoKey;
  */
 - (instancetype) initWithVideoIdentifier:(NSString *)videoIdentifier __attribute__((objc_designated_initializer));
 
+- (instancetype) initWithVideoIdentifier:(NSString *)videoIdentifier musicOnly:(BOOL)musicOnly musicOnlyDelegate:(id<XCDYouTubeVideoPlayerMusicOnlyDelegate>)musicOnlyDelegate;
+
 /**
  *  ------------------------------------
  *  @name Accessing the video identifier

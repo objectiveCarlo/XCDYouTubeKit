@@ -110,7 +110,26 @@ NSString *const XCDYouTubeVideoUserInfoKey = @"Video";
 	
 	return self;
 }
-
+- (instancetype) initWithVideoIdentifier:(NSString *)videoIdentifier musicOnly:(BOOL)musicOnly musicOnlyDelegate:(id<XCDYouTubeVideoPlayerMusicOnlyDelegate>)musicOnlyDelegate
+{
+	
+	if ([[[UIDevice currentDevice] systemVersion] integerValue] >= 8)
+		self = [super initWithContentURL:nil];
+	else
+		self = [super init];
+	
+	if (!self)
+		return nil;
+	self.musicOnly = musicOnly;
+	self.musicOnlyDelegate = musicOnlyDelegate;
+	// See https://github.com/0xced/XCDYouTubeKit/commit/cadec1c3857d6a302f71b9ce7d1ae48e389e6890
+	[[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidEnterBackgroundNotification object:nil];
+	self.checkURL = NO;
+	if (videoIdentifier)
+		self.videoIdentifier = videoIdentifier;
+	
+	return self;
+}
 
 #pragma clang diagnostic pop
 
