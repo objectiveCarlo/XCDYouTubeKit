@@ -53,8 +53,16 @@ NSString *const XCDYouTubeVideoUserInfoKey = @"Video";
 	
 	NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) response;
 	if ([httpResponse respondsToSelector:@selector(statusCode)]&&(long)[httpResponse statusCode] < 299) {
-	
-		self.moviePlayer.contentURL = self.currentStreamURL;
+		
+		if (!self.musicOnly) {
+			
+			self.moviePlayer.contentURL = self.currentStreamURL;
+		}
+		
+		if (self.musicOnlyDelegate) {
+			
+			[self.musicOnlyDelegate youTubeVideoPlayer:self withFetchedURL:self.currentStreamURL];
+		}
 		
 	} else {
 	

@@ -26,6 +26,8 @@ MP_EXTERN NSString *const XCDYouTubeVideoPlayerViewControllerDidReceiveVideoNoti
  */
 MP_EXTERN NSString *const XCDYouTubeVideoUserInfoKey;
 
+@protocol XCDYouTubeVideoPlayerMusicOnlyDelegate;
+
 /**
  *  A subclass of `MPMoviePlayerViewController` for playing YouTube videos.
  *
@@ -80,6 +82,9 @@ MP_EXTERN NSString *const XCDYouTubeVideoUserInfoKey;
  */
 @property (nonatomic, copy) NSArray *preferredVideoQualities;
 
+
+@property (nonatomic, assign) BOOL musicOnly;
+@property (nonatomic, assign) id<XCDYouTubeVideoPlayerMusicOnlyDelegate> musicOnlyDelegate;
 /**
  *  ------------------------
  *  @name Presenting a video
@@ -98,7 +103,11 @@ MP_EXTERN NSString *const XCDYouTubeVideoUserInfoKey;
 - (void) presentInView:(UIView *)view;
 
 @end
+@protocol XCDYouTubeVideoPlayerMusicOnlyDelegate <NSObject>
 
+- (void)youTubeVideoPlayer:(XCDYouTubeVideoPlayerViewController *)player withFetchedURL:(NSURL *)url;
+
+@end
 /**
  *  ------------------------------
  *  @name Deprecated notifications
