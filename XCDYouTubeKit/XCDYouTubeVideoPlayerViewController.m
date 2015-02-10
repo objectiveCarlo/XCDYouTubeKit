@@ -19,7 +19,7 @@ NSString *const XCDMetadataKeyLargeThumbnailURL = @"LargeThumbnailURL";
 NSString *const XCDYouTubeVideoPlayerViewControllerDidReceiveVideoNotification = @"XCDYouTubeVideoPlayerViewControllerDidReceiveVideoNotification";
 NSString *const XCDYouTubeVideoUserInfoKey = @"Video";
 
-@interface XCDYouTubeVideoPlayerViewController ()<NSURLConnectionDelegate>
+@interface XCDYouTubeVideoPlayerViewController ()
 @property (nonatomic, weak) id<XCDYouTubeOperation> videoOperation;
 @property (nonatomic, assign, getter = isEmbedded) BOOL embedded;
 @property (nonatomic, assign) BOOL checkURL;
@@ -46,39 +46,39 @@ NSString *const XCDYouTubeVideoUserInfoKey = @"Video";
  *        |-- [super init]
  *        `-- [self.moviePlayer setContentURL:contentURL]
  */
-#pragma mark -NSURLConnectionDelegate methods
-- (void)connection:(NSURLConnection*)connection didReceiveResponse:(NSURLResponse *)response
-{
-	NSLog(@"Did Receive Response %@", response);
-	
-	NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) response;
-	if ([httpResponse respondsToSelector:@selector(statusCode)]&&(long)[httpResponse statusCode] < 299) {
-		
-		if (!self.musicOnly) {
-			
-			self.moviePlayer.contentURL = self.currentStreamURL;
-		}
-		
-		if (self.musicOnlyDelegate) {
-			
-			[self.musicOnlyDelegate youTubeVideoPlayer:self withFetchedURL:self.currentStreamURL];
-		}
-		
-	} else {
-	
-		if (self.checkURL) {
-			
-			[self stopWithError:[NSError errorWithDomain:@"XC" code:[httpResponse statusCode] userInfo:nil]];
-			
-		} else {
-			
-			self.checkURL = YES;
-			[self forceVideoIdentifier];
-		}
-	}
-	
-	[connection cancel];
-}
+//#pragma mark -NSURLConnectionDelegate methods
+//- (void)connection:(NSURLConnection*)connection didReceiveResponse:(NSURLResponse *)response
+//{
+//	NSLog(@"Did Receive Response %@", response);
+//	
+//	NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) response;
+//	if ([httpResponse respondsToSelector:@selector(statusCode)]&&(long)[httpResponse statusCode] < 299) {
+//		
+//		if (!self.musicOnly) {
+//			
+//			self.moviePlayer.contentURL = self.currentStreamURL;
+//		}
+//		
+//		if (self.musicOnlyDelegate) {
+//			
+//			[self.musicOnlyDelegate youTubeVideoPlayer:self withFetchedURL:self.currentStreamURL];
+//		}
+//		
+//	} else {
+//	
+//		if (self.checkURL) {
+//			
+//			[self stopWithError:[NSError errorWithDomain:@"XC" code:[httpResponse statusCode] userInfo:nil]];
+//			
+//		} else {
+//			
+//			self.checkURL = YES;
+//			[self forceVideoIdentifier];
+//		}
+//	}
+//	
+//	[connection cancel];
+//}
 
 - (instancetype) init
 {
@@ -219,14 +219,18 @@ NSString *const XCDYouTubeVideoUserInfoKey = @"Video";
 #pragma clang diagnostic pop
 	
 	
-	NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:streamURL
-														  cachePolicy:NSURLRequestReloadIgnoringLocalAndRemoteCacheData
-													  timeoutInterval:10];
-	
-	[request setHTTPMethod: @"GET"];
 	self.currentStreamURL = streamURL;
 	if (streamURL) {
-		self.urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
+		
+		if (!self.musicOnly) {
+			
+			self.moviePlayer.contentURL = self.currentStreamURL;
+		}
+		
+		if (self.musicOnlyDelegate) {
+			
+			[self.musicOnlyDelegate youTubeVideoPlayer:self withFetchedURL:self.currentStreamURL];
+		}
 
 	} else {
 		
