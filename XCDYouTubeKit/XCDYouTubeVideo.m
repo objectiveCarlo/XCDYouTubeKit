@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2013-2014 Cédric Luthi. All rights reserved.
+//  Copyright (c) 2013-2015 Cédric Luthi. All rights reserved.
 //
 
 #import "XCDYouTubeVideo+Private.h"
@@ -39,7 +39,7 @@ static NSString *XCDURLEncodedStringUsingEncoding(NSString *string, NSStringEnco
 
 NSString *XCDQueryStringWithDictionary(NSDictionary *dictionary, NSStringEncoding encoding)
 {
-	NSArray *keys = [[dictionary allKeys] filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(id evaluatedObject, NSDictionary *bindings) {
+	NSArray *keys = [dictionary.allKeys filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(id evaluatedObject, NSDictionary *bindings) {
 		return [evaluatedObject isKindOfClass:[NSString class]];
 	}]];
 	
@@ -57,6 +57,13 @@ NSString *XCDQueryStringWithDictionary(NSDictionary *dictionary, NSStringEncodin
 }
 
 @implementation XCDYouTubeVideo
+
+static NSDate * ExpirationDate(NSURL *streamURL)
+{
+	NSDictionary *query = XCDDictionaryWithQueryString(streamURL.query, NSUTF8StringEncoding);
+	NSTimeInterval expire = [query[@"expire"] doubleValue];
+	return expire > 0 ? [NSDate dateWithTimeIntervalSince1970:expire] : nil;
+}
 
 - (instancetype) initWithIdentifier:(NSString *)identifier info:(NSDictionary *)info playerScript:(XCDYouTubePlayerScript *)playerScript response:(NSURLResponse *)response error:(NSError * __autoreleasing *)error
 {
@@ -86,16 +93,6 @@ NSString *XCDQueryStringWithDictionary(NSDictionary *dictionary, NSStringEncodin
 		_mediumThumbnailURL = mediumThumbnail ? [NSURL URLWithString:mediumThumbnail] : nil;
 		_largeThumbnailURL = largeThumbnail ? [NSURL URLWithString:largeThumbnail] : nil;
 		
-		NSString *useCipherSignature = info[@"use_cipher_signature"];
-		if ([useCipherSignature boolValue] && !playerScript)
-		{
-			userInfo[XCDYouTubeNoStreamVideoUserInfoKey] = self;
-			if (error)
-				*error = [NSError errorWithDomain:XCDYouTubeVideoErrorDomain code:XCDYouTubeErrorUseCipherSignature userInfo:userInfo];
-			
-			return nil;
-		}
-		
 		NSMutableDictionary *streamURLs = [NSMutableDictionary new];
 		
 		if (httpLiveStream)
@@ -106,23 +103,31 @@ NSString *XCDQueryStringWithDictionary(NSDictionary *dictionary, NSStringEncodin
 			NSDictionary *stream = XCDDictionaryWithQueryString(streamQuery, NSUTF8StringEncoding);
 			
 			NSString *scrambledSignature = stream[@"s"];
-			NSString *signature = [playerScript unscrambleSignature:scrambledSignature];
-			
-			if (![[XCDYouTubeClient defaultClient] useCheat]) {
+			if (scrambledSignature && !playerScript)
+			{
+				userInfo[XCDYouTubeNoStreamVideoUserInfoKey] = self;
+				if (error)
+					*error = [NSError errorWithDomain:XCDYouTubeVideoErrorDomain code:XCDYouTubeErrorUseCipherSignature userInfo:userInfo];
 				
-				if (playerScript && !signature)
-					continue;
+				return nil;
 			}
+			NSString *signature = [playerScript unscrambleSignature:scrambledSignature];
+
+			if (playerScript && scrambledSignature && !signature)
+				continue;
 			
 			NSString *urlString = stream[@"url"];
 			NSString *itag = stream[@"itag"];
 			if (urlString && itag)
 			{
 				NSURL *streamURL = [NSURL URLWithString:urlString];
+				if (!_expirationDate)
+					_expirationDate = ExpirationDate(streamURL);
+				
 				if (signature)
 					streamURL = [NSURL URLWithString:[NSString stringWithFormat:@"%@&signature=%@", urlString, [signature stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]]];
 				
-				streamURLs[@([itag integerValue])] = streamURL;
+				streamURLs[@(itag.integerValue)] = streamURL;
 			}
 		}
 		_streamURLs = [streamURLs copy];
@@ -154,7 +159,7 @@ NSString *XCDQueryStringWithDictionary(NSDictionary *dictionary, NSStringEncodin
 			}
 			
 			NSString *errorcode = info[@"errorcode"];
-			NSInteger code = errorcode ? [errorcode integerValue] : XCDYouTubeErrorNoStreamAvailable;
+			NSInteger code = errorcode ? errorcode.integerValue : XCDYouTubeErrorNoStreamAvailable;
 			*error = [NSError errorWithDomain:XCDYouTubeVideoErrorDomain code:code userInfo:userInfo];
 		}
 		return nil;
@@ -183,7 +188,7 @@ NSString *XCDQueryStringWithDictionary(NSDictionary *dictionary, NSStringEncodin
 
 - (NSUInteger) hash
 {
-	return [self.identifier hash];
+	return self.identifier.hash;
 }
 
 - (NSString *) description
@@ -193,8 +198,9 @@ NSString *XCDQueryStringWithDictionary(NSDictionary *dictionary, NSStringEncodin
 
 - (NSString *) debugDescription
 {
+	NSString *duration = [[NSDateComponentsFormatter new] stringFromTimeInterval:self.duration] ?: [NSString stringWithFormat:@"%@ seconds", @(self.duration)];
 	NSString *thumbnailDescription = [NSString stringWithFormat:@"Small  thumbnail: %@\nMedium thumbnail: %@\nLarge  thumbnail: %@", self.smallThumbnailURL, self.mediumThumbnailURL, self.largeThumbnailURL];
-	return [NSString stringWithFormat:@"<%@: %p> %@\nDuration: %@ seconds\n%@\nVideo Streams: %@", self.class, self, self.description, @(self.duration), thumbnailDescription, self.streamURLs];
+	return [NSString stringWithFormat:@"<%@: %p> %@\nDuration: %@\nExpiration date: %@\n%@\nVideo Streams: %@", self.class, self, self.description, duration, self.expirationDate, thumbnailDescription, self.streamURLs];
 }
 
 #pragma mark - NSCopying

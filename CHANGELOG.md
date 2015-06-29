@@ -1,3 +1,29 @@
+#### Version 2.2.0
+
+* Networking and parsing code is executed on a background thread for better performance. The `XCDYouTubeVideoOperation` class has changed from an asynchronous to a synchronous operation and must not be started on the main thread. (#147)
+* Logging support, see the [README](README.md#logging) for documentation.
+* Improved documentation.
+
+#### Version 2.1.3
+
+* Adaptation to YouTube API change. (#144)
+
+#### Version 2.1.2
+
+* Fixed playback of some protected videos. (#122)
+* Fixed playback of some age restricted videos. (#137)
+
+#### Version 2.1.1
+
+* Adaptation to YouTube API change. (#116)
+
+#### Version 2.1.0
+
+* New `expirationDate` property on the `XCDYouTubeVideo` class. (#96)
+* Create proper (non generic) Xcode archives when integrated manually. (#102)
+* Adaptation to YouTube API change. (#105)
+* Fixed protected age restricted videos.
+
 #### Version 2.0.3
 
 * Adaptation to YouTube API change. (#94)

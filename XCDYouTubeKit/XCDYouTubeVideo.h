@@ -1,13 +1,13 @@
 //
-//  Copyright (c) 2013-2014 Cédric Luthi. All rights reserved.
+//  Copyright (c) 2013-2015 Cédric Luthi. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
 
 /**
- *  The quality of YouTube videos. These values are used as keys in the `streamURLs` property of the `XCDYouTubeVideo` class.
+ *  The quality of YouTube videos. These values are used as keys in the `<[XCDYouTubeVideo streamURLs]>` property.
  *
- *  The constant numbers are the YouTube [itag](https://en.wikipedia.org/wiki/YouTube#Quality_and_codecs) values.
+ *  The constant numbers are the YouTube [itag](https://en.wikipedia.org/wiki/YouTube#Quality_and_formats) values.
  */
 typedef NS_ENUM(NSUInteger, XCDYouTubeVideoQuality) {
 	/**
@@ -43,7 +43,7 @@ typedef NS_ENUM(NSUInteger, XCDYouTubeVideoQuality) {
 extern NSString *const XCDYouTubeVideoQualityHTTPLiveStreaming;
 
 /**
- *  Represents a YouTube video. Use the `-[XCDYouTubeClient getVideoWithIdentifier:completionHandler:]` method to obtain a `XCDYouTubeVideo` object.
+ *  Represents a YouTube video. Use the `<-[XCDYouTubeClient getVideoWithIdentifier:completionHandler:]>` method to obtain a `XCDYouTubeVideo` object.
  */
 @interface XCDYouTubeVideo : NSObject <NSCopying>
 
@@ -82,12 +82,20 @@ extern NSString *const XCDYouTubeVideoQualityHTTPLiveStreaming;
 /**
  *  A dictionary of video stream URLs.
  *
- *  The keys are the YouTube [itag](https://en.wikipedia.org/wiki/YouTube#Quality_and_codecs) values as `NSNumber` objects. The values are the video URLs as `NSURL` objects. There is also the special `XCDYouTubeVideoQualityHTTPLiveStreaming` key for live videos.
+ *  The keys are the YouTube [itag](https://en.wikipedia.org/wiki/YouTube#Quality_and_formats) values as `NSNumber` objects. The values are the video URLs as `NSURL` objects. There is also the special `XCDYouTubeVideoQualityHTTPLiveStreaming` key for live videos.
  *
- *  You must not store the URLs for later use since they have a limited lifetime.
+ *  You should not store the URLs for later use since they have a limited lifetime and are bound to an IP address.
  *
  *  @see XCDYouTubeVideoQuality
+ *  @see expirationDate
  */
 @property (nonatomic, readonly) NSDictionary *streamURLs;
+
+/**
+ *  The expiration date of the video.
+ *
+ *  After this date, the stream URLs will not be playable. May be nil if it can not be determined, for example in live videos.
+ */
+@property (nonatomic, readonly) NSDate *expirationDate;
 
 @end
